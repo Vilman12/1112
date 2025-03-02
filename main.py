@@ -4,8 +4,8 @@ import pandas as pd
 import threading
 
 # API-ключи Binance
-API_KEY = "lgmS7i4y7VpePCmDtLbFrtZE8uFRdewBwQ0WK1PXWWzsstw8OqjQLN1E3kgYSESU"
-API_SECRET = "wBdwwVynnNdqy99B8D28JJsd8aZybbZv18rTPQffgIZm30PzJRLSAWzdFqlAcgwK"
+API_KEY = "7VpePCmDtLbFrtZE8uFRdewBwQ0WK1PXWWzsstw"
+API_SECRET = "Ndqy99B8D28JJsd8aZybbZv18rTPQffgIZm"
 
 # Подключение к Binance
 exchange = ccxt.binance({
