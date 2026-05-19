@@ -12,8 +12,21 @@ ROOT = Path(__file__).resolve().parent.parent
 
 @dataclass
 class StrategyConfig:
+    mode: str = "pullback"
     ema_fast: int = 50
     ema_slow: int = 200
+    ema_sep_pct: float = 0.0012
+    pullback_pct: float = 0.004
+    adx_min: float = 22.0
+    min_atr_pct: float = 0.0025
+    max_atr_pct: float = 0.02
+    rsi_period: int = 14
+    rsi_long_min: float = 38.0
+    rsi_long_max: float = 52.0
+    rsi_short_min: float = 48.0
+    rsi_short_max: float = 62.0
+    volume_factor: float = 0.85
+    require_bullish_candle: bool = True
     stoch_oversold: float = 30
     stoch_overbought: float = 70
     support_buffer_pct: float = 0.002
@@ -39,11 +52,33 @@ class Settings:
     paper_trading: bool
 
 
+def _strategy_from_yaml(strat: dict) -> StrategyConfig:
+    return StrategyConfig(
+        mode=str(strat.get("mode", "pullback")),
+        ema_fast=int(strat.get("ema_fast", 50)),
+        ema_slow=int(strat.get("ema_slow", 200)),
+        ema_sep_pct=float(strat.get("ema_sep_pct", 0.0012)),
+        pullback_pct=float(strat.get("pullback_pct", 0.004)),
+        adx_min=float(strat.get("adx_min", 22)),
+        min_atr_pct=float(strat.get("min_atr_pct", 0.0025)),
+        max_atr_pct=float(strat.get("max_atr_pct", 0.02)),
+        rsi_period=int(strat.get("rsi_period", 14)),
+        rsi_long_min=float(strat.get("rsi_long_min", 38)),
+        rsi_long_max=float(strat.get("rsi_long_max", 52)),
+        rsi_short_min=float(strat.get("rsi_short_min", 48)),
+        rsi_short_max=float(strat.get("rsi_short_max", 62)),
+        volume_factor=float(strat.get("volume_factor", 0.85)),
+        require_bullish_candle=bool(strat.get("require_bullish_candle", True)),
+        stoch_oversold=float(strat.get("stoch_oversold", 30)),
+        stoch_overbought=float(strat.get("stoch_overbought", 70)),
+        support_buffer_pct=float(strat.get("support_buffer_pct", 0.002)),
+    )
+
+
 def load_settings(config_path: Path | None = None) -> Settings:
     load_dotenv(ROOT / ".env")
     path = config_path or ROOT / "config.yaml"
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
-
     strat = raw.get("strategy") or {}
     return Settings(
         symbol=raw["symbol"],
@@ -57,13 +92,7 @@ def load_settings(config_path: Path | None = None) -> Settings:
         take_profit_pct=float(raw["take_profit_pct"]),
         max_open_positions=int(raw["max_open_positions"]),
         cooldown_minutes=int(raw["cooldown_minutes"]),
-        strategy=StrategyConfig(
-            ema_fast=int(strat.get("ema_fast", 50)),
-            ema_slow=int(strat.get("ema_slow", 200)),
-            stoch_oversold=float(strat.get("stoch_oversold", 30)),
-            stoch_overbought=float(strat.get("stoch_overbought", 70)),
-            support_buffer_pct=float(strat.get("support_buffer_pct", 0.002)),
-        ),
+        strategy=_strategy_from_yaml(strat),
         loop_seconds=int(raw.get("loop_seconds", 60)),
         api_key=os.getenv("BINANCE_API_KEY", "").strip(),
         api_secret=os.getenv("BINANCE_API_SECRET", "").strip(),

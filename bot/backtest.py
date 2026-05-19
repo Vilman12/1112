@@ -242,9 +242,17 @@ def main() -> None:
     parser.add_argument("--balance", type=float, default=10_000.0)
     parser.add_argument("--fee", type=float, default=0.0004)
     parser.add_argument("--refresh", action="store_true")
+    parser.add_argument(
+        "--mode",
+        choices=("pullback", "classic"),
+        default=None,
+        help="Override strategy.mode from config.yaml",
+    )
     args = parser.parse_args()
 
     settings = load_settings()
+    if args.mode:
+        settings.strategy.mode = args.mode
     cache_path = (
         ROOT
         / "data"
@@ -253,7 +261,9 @@ def main() -> None:
     if args.refresh and cache_path.exists():
         cache_path.unlink()
 
-    print(f"Loading {settings.symbol} {settings.timeframe} ({args.days}d)...")
+    print(
+        f"Loading {settings.symbol} {settings.timeframe} ({args.days}d) | strategy={settings.strategy.mode}..."
+    )
     df = fetch_ohlcv_history(settings, days=args.days, cache_path=cache_path)
     print(f"Candles: {len(df)} | {df['timestamp'].iloc[0]} .. {df['timestamp'].iloc[-1]}")
 

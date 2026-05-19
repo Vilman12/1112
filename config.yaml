@@ -7,18 +7,28 @@ risk_per_trade: 0.01
 max_balance_pct: 0.25
 min_trade_btc: 0.001
 
-stop_loss_pct: 0.006
-take_profit_pct: 0.012
+# v2: чуть ближе TP → выше win rate (цель 55–60%)
+# Узкий SL + ближний TP → выше win rate (~55–60%)
+stop_loss_pct: 0.0085
+take_profit_pct: 0.007
 
-max_open_positions: 2
-cooldown_minutes: 30
+max_open_positions: 1
+cooldown_minutes: 45
 
-# Стратегия: все условия должны совпасть
 strategy:
+  mode: pullback
   ema_fast: 50
   ema_slow: 200
-  stoch_oversold: 30
-  stoch_overbought: 70
-  support_buffer_pct: 0.002
+  ema_sep_pct: 0.0012
+  pullback_pct: 0.004
+  adx_min: 20
+  min_atr_pct: 0.0025
+  max_atr_pct: 0.02
+  rsi_long_min: 38
+  rsi_long_max: 52
+  rsi_short_min: 48
+  rsi_short_max: 62
+  volume_factor: 0.85
+  require_bullish_candle: true
 
 loop_seconds: 60
