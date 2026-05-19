@@ -21,13 +21,13 @@ class Signal:
     price: float
 
 
-def evaluate(df: pd.DataFrame, cfg: StrategyConfig) -> Signal:
-    """Сигнал по закрытой свече (-2), не по текущей формирующейся."""
-    if len(df) < 3:
+def evaluate_at(df: pd.DataFrame, idx: int, cfg: StrategyConfig) -> Signal:
+    """Сигнал по закрытой свече с индексом idx (для бэктеста и live)."""
+    if idx < 2 or idx >= len(df):
         return Signal(Side.FLAT, "not_enough_data", 0.0)
 
-    prev = df.iloc[-3]
-    last = df.iloc[-2]
+    prev = df.iloc[idx - 1]
+    last = df.iloc[idx]
     price = float(last["close"])
 
     bull_trend = last["ema_fast"] > last["ema_slow"]
@@ -58,3 +58,10 @@ def evaluate(df: pd.DataFrame, cfg: StrategyConfig) -> Signal:
         return Signal(Side.SHORT, "trend+macd+stoch_down+resistance", price)
 
     return Signal(Side.FLAT, "no_setup", price)
+
+
+def evaluate(df: pd.DataFrame, cfg: StrategyConfig) -> Signal:
+    """Сигнал по закрытой свече (-2), не по текущей формирующейся."""
+    if len(df) < 3:
+        return Signal(Side.FLAT, "not_enough_data", 0.0)
+    return evaluate_at(df, len(df) - 2, cfg)

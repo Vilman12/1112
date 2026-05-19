@@ -10,4 +10,6 @@ build/
 *.exe
 logs/
 *.log
+data/*.csv
+!data/.gitkeep
 .DS_Store
