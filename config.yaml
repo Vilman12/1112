@@ -1,0 +1,24 @@
+symbol: BTC/USDT
+timeframe: 15m
+candle_limit: 250
+
+leverage: 10
+risk_per_trade: 0.01
+max_balance_pct: 0.25
+min_trade_btc: 0.001
+
+stop_loss_pct: 0.006
+take_profit_pct: 0.012
+
+max_open_positions: 2
+cooldown_minutes: 30
+
+# Стратегия: все условия должны совпасть
+strategy:
+  ema_fast: 50
+  ema_slow: 200
+  stoch_oversold: 30
+  stoch_overbought: 70
+  support_buffer_pct: 0.002
+
+loop_seconds: 60
