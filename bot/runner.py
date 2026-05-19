@@ -5,10 +5,14 @@ import time
 from datetime import datetime, timezone
 
 from bot.config import Settings, load_settings
+from bot.dispatcher import evaluate_dispatch
 from bot.exchange import Exchange
-from bot.indicators import enrich
+from bot.funding.harvester import FundingHarvester
+from bot.killswitch import KillSwitch
+from bot.pipeline import prepare_df
 from bot.risk import build_plan, size_position
-from bot.strategy import Side, evaluate
+from bot.stops import levels
+from bot.strategy import Side
 
 log = logging.getLogger(__name__)
 
@@ -17,8 +21,11 @@ class Bot:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or load_settings()
         self.exchange = Exchange(self.settings)
+        self.funding = FundingHarvester(self.settings, self.exchange)
+        self.killswitch = KillSwitch(self.settings.killswitch, 1_000.0)
         self._last_candle_ts: datetime | None = None
         self._cooldown_until: float = 0
+        self._df = None
 
     def setup_logging(self) -> None:
         from pathlib import Path
@@ -39,10 +46,11 @@ class Bot:
     def run(self) -> None:
         self.setup_logging()
         log.info(
-            "Старт 1112 | %s %s | leverage %sx | paper=%s",
+            "Старт 1112 v3 | %s %s | regime=%s | atr_stops=%s | paper=%s",
             self.settings.symbol,
             self.settings.timeframe,
-            self.settings.leverage,
+            self.settings.regime.enabled,
+            self.settings.risk_stops.use_atr_stops,
             self.settings.paper_trading,
         )
         self.exchange.connect()
@@ -58,8 +66,12 @@ class Bot:
             time.sleep(self.settings.loop_seconds)
 
     def _tick(self) -> None:
-        df = self.exchange.fetch_ohlcv()
-        df = enrich(df, self.settings.strategy)
+        raw = self.exchange.fetch_ohlcv()
+        df = prepare_df(raw, self.settings)
+        self._df = df
+
+        if self.settings.funding.enabled:
+            self.funding.tick()
 
         closed = df.iloc[-2]
         candle_ts = closed["timestamp"].to_pydatetime()
@@ -67,16 +79,24 @@ class Bot:
             return
         self._last_candle_ts = candle_ts
 
-        signal = evaluate(df, self.settings.strategy)
+        regime = str(closed.get("regime", "?"))
+        idx = len(df) - 2
+        signal = evaluate_dispatch(df, idx, self.settings)
         log.info(
-            "Свеча %s | close=%.2f | сигнал=%s (%s)",
+            "Свеча %s | regime=%s | close=%.2f | %s (%s)",
             candle_ts.strftime("%Y-%m-%d %H:%M UTC"),
+            regime,
             signal.price,
             signal.side.value,
             signal.reason,
         )
 
         if signal.side == Side.FLAT:
+            return
+
+        balance = self.exchange.fetch_balance_usdt()
+        if not self.killswitch.update(balance if balance > 0 else 1_000, candle_ts):
+            log.warning("Kill-switch: торговля остановлена (%s)", self.killswitch.halt_reason)
             return
 
         if time.time() < self._cooldown_until:
@@ -93,11 +113,16 @@ class Bot:
             log.info("Уже есть позиция %s — пропуск", position_side)
             return
 
-        plan = build_plan(self.settings, signal.side, signal.price)
+        price = float(closed["close"])
+        atr = float(closed["atr"])
+        _, sl, tp, sl_pct = levels(signal.side, price, atr, self.settings)
+
+        plan = build_plan(self.settings, signal.side, price)
         if not plan:
             return
+        plan.stop_loss = sl
+        plan.take_profit = tp
 
-        balance = self.exchange.fetch_balance_usdt()
         if not self.settings.paper_trading and balance <= 0:
             log.warning("Баланс USDT = 0")
             return
@@ -105,8 +130,8 @@ class Bot:
         qty = size_position(
             self.settings,
             balance if balance > 0 else 10_000,
-            signal.price,
-            self.settings.stop_loss_pct,
+            price,
+            sl_pct,
         )
-        self.exchange.execute(plan, qty, signal.price)
+        self.exchange.execute(plan, qty, price)
         self._cooldown_until = time.time() + self.settings.cooldown_minutes * 60

@@ -54,6 +54,8 @@ def size_position(
 
     risk_usdt = balance_usdt * settings.risk_per_trade
     qty_by_risk = risk_usdt / (price * stop_pct)
-    cap_qty = (balance_usdt * settings.max_balance_pct * settings.leverage) / price
+    # Потолок: доля депозита в марже × плечо = max notional (Futures)
+    max_notional = balance_usdt * settings.max_balance_pct * settings.leverage
+    cap_qty = max_notional / price
     qty = min(qty_by_risk, cap_qty)
     return max(qty, settings.min_trade_btc)

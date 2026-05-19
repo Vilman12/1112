@@ -30,6 +30,47 @@ class StrategyConfig:
     stoch_oversold: float = 30
     stoch_overbought: float = 70
     support_buffer_pct: float = 0.002
+    use_htf_filter: bool = True
+    macd_rising_bars: int = 2
+    long_only: bool = False
+    breakout_lookback: int = 20
+    combo: str = ""
+
+
+@dataclass
+class RegimeConfig:
+    enabled: bool = True
+    trend_adx_min: float = 22.0
+    range_adx_max: float = 18.0
+    trend_ema_sep_pct: float = 0.001
+    chaos_atr_pct_min: float = 0.0015
+    chaos_atr_pct_max: float = 0.035
+    min_daily_trend_slope: float = 0.001
+
+
+@dataclass
+class RiskStopsConfig:
+    use_atr_stops: bool = True
+    sl_atr_mult: float = 1.5
+    tp_atr_mult: float = 2.5
+    min_sl_pct: float = 0.006
+    max_sl_pct: float = 0.022
+    min_tp_pct: float = 0.008
+    max_tp_pct: float = 0.04
+
+
+@dataclass
+class KillSwitchConfig:
+    enabled: bool = True
+    max_weekly_loss_pct: float = 5.0
+    max_drawdown_pct: float = 15.0
+
+
+@dataclass
+class FundingConfig:
+    enabled: bool = False
+    min_rate_pct: float = 0.03
+    allocation_pct: float = 0.4
 
 
 @dataclass
@@ -50,6 +91,11 @@ class Settings:
     api_key: str
     api_secret: str
     paper_trading: bool
+    exit_rules: dict
+    regime: RegimeConfig
+    risk_stops: RiskStopsConfig
+    killswitch: KillSwitchConfig
+    funding: FundingConfig
 
 
 def _strategy_from_yaml(strat: dict) -> StrategyConfig:
@@ -72,6 +118,51 @@ def _strategy_from_yaml(strat: dict) -> StrategyConfig:
         stoch_oversold=float(strat.get("stoch_oversold", 30)),
         stoch_overbought=float(strat.get("stoch_overbought", 70)),
         support_buffer_pct=float(strat.get("support_buffer_pct", 0.002)),
+        use_htf_filter=bool(strat.get("use_htf_filter", True)),
+        macd_rising_bars=int(strat.get("macd_rising_bars", 2)),
+        long_only=bool(strat.get("long_only", False)),
+        breakout_lookback=int(strat.get("breakout_lookback", 20)),
+        combo=str(strat.get("combo", "") or ""),
+    )
+
+
+def _regime_from_yaml(d: dict) -> RegimeConfig:
+    return RegimeConfig(
+        enabled=bool(d.get("enabled", True)),
+        trend_adx_min=float(d.get("trend_adx_min", 22)),
+        range_adx_max=float(d.get("range_adx_max", 18)),
+        trend_ema_sep_pct=float(d.get("trend_ema_sep_pct", 0.001)),
+        chaos_atr_pct_min=float(d.get("chaos_atr_pct_min", 0.0015)),
+        chaos_atr_pct_max=float(d.get("chaos_atr_pct_max", 0.035)),
+        min_daily_trend_slope=float(d.get("min_daily_trend_slope", 0.001)),
+    )
+
+
+def _risk_stops_from_yaml(d: dict) -> RiskStopsConfig:
+    return RiskStopsConfig(
+        use_atr_stops=bool(d.get("use_atr_stops", True)),
+        sl_atr_mult=float(d.get("sl_atr_mult", 1.5)),
+        tp_atr_mult=float(d.get("tp_atr_mult", 2.5)),
+        min_sl_pct=float(d.get("min_sl_pct", 0.006)),
+        max_sl_pct=float(d.get("max_sl_pct", 0.022)),
+        min_tp_pct=float(d.get("min_tp_pct", 0.008)),
+        max_tp_pct=float(d.get("max_tp_pct", 0.04)),
+    )
+
+
+def _killswitch_from_yaml(d: dict) -> KillSwitchConfig:
+    return KillSwitchConfig(
+        enabled=bool(d.get("enabled", True)),
+        max_weekly_loss_pct=float(d.get("max_weekly_loss_pct", 5)),
+        max_drawdown_pct=float(d.get("max_drawdown_pct", 15)),
+    )
+
+
+def _funding_from_yaml(d: dict) -> FundingConfig:
+    return FundingConfig(
+        enabled=bool(d.get("enabled", False)),
+        min_rate_pct=float(d.get("min_rate_pct", 0.03)),
+        allocation_pct=float(d.get("allocation_pct", 0.4)),
     )
 
 
@@ -97,4 +188,9 @@ def load_settings(config_path: Path | None = None) -> Settings:
         api_key=os.getenv("BINANCE_API_KEY", "").strip(),
         api_secret=os.getenv("BINANCE_API_SECRET", "").strip(),
         paper_trading=os.getenv("PAPER_TRADING", "true").lower() in ("1", "true", "yes"),
+        exit_rules=dict(raw.get("exit") or {}),
+        regime=_regime_from_yaml(raw.get("regime") or {}),
+        risk_stops=_risk_stops_from_yaml(raw.get("risk_stops") or {}),
+        killswitch=_killswitch_from_yaml(raw.get("killswitch") or {}),
+        funding=_funding_from_yaml(raw.get("funding") or {}),
     )

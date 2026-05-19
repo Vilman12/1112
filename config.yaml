@@ -2,33 +2,63 @@ symbol: BTC/USDT
 timeframe: 15m
 candle_limit: 250
 
-leverage: 10
-risk_per_trade: 0.01
-max_balance_pct: 0.25
+leverage: 5
+risk_per_trade: 0.02
+max_balance_pct: 0.30
 min_trade_btc: 0.001
 
-# v2: чуть ближе TP → выше win rate (цель 55–60%)
-# Узкий SL + ближний TP → выше win rate (~55–60%)
-stop_loss_pct: 0.0085
-take_profit_pct: 0.007
+# Fallback если risk_stops.use_atr_stops: false
+stop_loss_pct: 0.009
+take_profit_pct: 0.016
 
 max_open_positions: 1
-cooldown_minutes: 45
+cooldown_minutes: 90
+
+# v3: диспетчер режимов (trend→classic, range→mean rev, chaos→flat)
+regime:
+  enabled: true
+  trend_adx_min: 22
+  range_adx_max: 18
+  trend_ema_sep_pct: 0.001
+  chaos_atr_pct_min: 0.0015
+  chaos_atr_pct_max: 0.035
+  min_daily_trend_slope: 0.001
+
+risk_stops:
+  use_atr_stops: true
+  sl_atr_mult: 1.5
+  tp_atr_mult: 2.5
+  min_sl_pct: 0.006
+  max_sl_pct: 0.022
+  min_tp_pct: 0.008
+  max_tp_pct: 0.04
+
+killswitch:
+  enabled: true
+  max_weekly_loss_pct: 5
+  max_drawdown_pct: 15
+
+funding:
+  enabled: false
+  min_rate_pct: 0.03
+  allocation_pct: 0.4
 
 strategy:
-  mode: pullback
+  mode: classic
   ema_fast: 50
   ema_slow: 200
-  ema_sep_pct: 0.0012
-  pullback_pct: 0.004
-  adx_min: 20
+  adx_min: 22
   min_atr_pct: 0.0025
   max_atr_pct: 0.02
-  rsi_long_min: 38
-  rsi_long_max: 52
-  rsi_short_min: 48
-  rsi_short_max: 62
+  stoch_oversold: 30
+  stoch_overbought: 70
+  support_buffer_pct: 0.002
   volume_factor: 0.85
-  require_bullish_candle: true
+  use_htf_filter: false
+  long_only: false
+
+exit:
+  breakeven_trigger_pct: 0
+  trail_trigger_pct: 0
 
 loop_seconds: 60

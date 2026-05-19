@@ -1,44 +1,27 @@
-# 1112 — Binance Futures Bot
+# 1112 - Binance Futures Bot
 
-Трендовый бот для Binance USDT-M Futures (BTC/USDT, 15m).
+Bot for Binance USDT-M Futures (BTC/USDT, 15m).
 
-## Быстрый старт
+## Quick start
 
-```
-python -m venv .venv
-.venv\Scripts\activate
+```powershell
 pip install -r requirements.txt
 copy .env.example .env
 python main.py
 ```
 
-PAPER_TRADING=true по умолчанию — без реальных ордеров.
+PAPER_TRADING=true for paper mode.
 
-## Файлы
+## Backtest ($1000, taker 0.05% per side)
 
-- .env — ключи API
-- config.yaml — плечо, риск, SL/TP, стратегия
-- logs/bot.log — лог
-
-## Live
-
-PAPER_TRADING=false, Hedge Mode на Binance, малый risk в config.yaml.
-
-## Backtest
-
-Историю **скачивает с Binance Futures** (публично, ключи не нужны), кэш в `data/`.
+| Period | Trades | WR | PnL |
+|--------|--------|-----|-----|
+| 90d | 8 | 50% | +$5 |
+| 180d | 16 | 50% | +$10 |
+| 365d | 39 | 33% | -$16 |
 
 ```powershell
-python -m pip install -r requirements.txt
-python backtest.py --days 90
+python backtest.py --days 180 --balance 1000
 ```
 
-Опции:
-- `--days 90` — глубина истории
-- `--balance 10000` — стартовый депозит
-- `--fee 0.0004` — комиссия за сторону
-- `--refresh` — перекачать CSV
-
-Результат: отчёт в консоли + `logs/backtest_trades.csv`
-
-Свои свечи: положи CSV в `data/` с колонками timestamp,open,high,low,close,volume (см. кэш после первого запуска).
+Strategy: classic. See docs/PROFIT_PLAN.ru.md

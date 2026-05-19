@@ -61,4 +61,24 @@ def enrich(df: pd.DataFrame, cfg: StrategyConfig) -> pd.DataFrame:
     out["atr_pct"] = out["atr"] / out["close"]
     out["adx"] = _adx(out)
     out["vol_sma"] = out["volume"].rolling(20).mean()
+
+    # 1h тренд (forward-fill на 15m)
+    if cfg.use_htf_filter:
+        htf = (
+            out.set_index("timestamp")[["close"]]
+            .resample("1h")
+            .last()
+            .dropna()
+        )
+        htf["ema_fast_1h"] = htf["close"].ewm(span=cfg.ema_fast, adjust=False).mean()
+        htf["ema_slow_1h"] = htf["close"].ewm(span=cfg.ema_slow, adjust=False).mean()
+        htf["htf_bull"] = (htf["ema_fast_1h"] > htf["ema_slow_1h"]).astype(int)
+        out = out.merge(
+            htf[["htf_bull"]],
+            left_on="timestamp",
+            right_index=True,
+            how="left",
+        )
+        out["htf_bull"] = out["htf_bull"].ffill().fillna(0).astype(int)
+
     return out.dropna()
